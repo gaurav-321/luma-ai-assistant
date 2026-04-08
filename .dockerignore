@@ -1,0 +1,14 @@
+.git
+.gitignore
+.idea
+.venv
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+logs/
+core/logs/
+crew_personal_agents.rar
+*.sqlite-journal

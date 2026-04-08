@@ -1,0 +1,31 @@
+watcher_key: food_calories
+enabled: true
+watcher_type: action_task
+cron: "0 * * * *"
+timezone: "Asia/Calcutta"
+thread_id:
+priority: 4
+
+controller:
+  scope: all
+  users: [ ]
+
+notify:
+  min_severity: low
+  cooldown_minutes: 60
+  only_on_change: true
+  max_notifications_per_day: 8
+
+reminder:
+  repeat_until_done: true
+  repeat_every_minutes: 360
+  max_repeats: 6
+  escalation_after_misses: [ 2, 4, 6 ]
+
+prompt:
+  purpose: "Track food logging and calorie progress"
+  when_to_inform: "Inform when no meal logs exist or calories are far below target"
+  extra_instructions: "Keep reminder short and include next meal action"
+
+targets:
+  daily_calories: 2200

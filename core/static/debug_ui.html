@@ -1,0 +1,1187 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width,initial-scale=1" name="viewport"/>
+    <title>Agent Debug UI</title>
+    <style>
+        :root {
+            --bg: #08111d;
+            --bg2: #0c1728;
+            --panel: rgba(13, 22, 39, .94);
+            --line: rgba(132, 163, 208, .18);
+            --text: #eef4ff;
+            --muted: #8ea0bc;
+            --a: #64e6cf;
+            --b: #77a9ff;
+            --good: #2fe59d;
+            --warn: #f3c969;
+            --bad: #ff7c93;
+            --shadow: 0 18px 44px rgba(0, 0, 0, .35);
+            --r: 18px
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html, body {
+            min-height: 100%
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--text);
+            background: radial-gradient(circle at top left, rgba(100, 230, 207, .10), transparent 32%), radial-gradient(circle at top right, rgba(119, 169, 255, .13), transparent 28%), linear-gradient(180deg, #08101b 0%, #0d1726 100%);
+            overflow-x: hidden
+        }
+
+        body:before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image: linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            opacity: .45;
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, .5), transparent 92%)
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns:380px minmax(0, 1fr);
+            min-height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto
+        }
+
+        .sidebar {
+            padding: 22px 18px;
+            border-right: 1px solid var(--line);
+            background: linear-gradient(180deg, rgba(11, 17, 31, .96), rgba(12, 19, 34, .9));
+            backdrop-filter: blur(16px)
+        }
+
+        .workspace {
+            padding: 22px
+        }
+
+        .brand {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 24px;
+            line-height: 1.1
+        }
+
+        .brand p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.45;
+            max-width: 28ch
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 32px;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .04);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap
+        }
+
+        .chip--a {
+            border-color: rgba(100, 230, 207, .34);
+            background: rgba(100, 230, 207, .10)
+        }
+
+        .chip--b {
+            border-color: rgba(119, 169, 255, .34);
+            background: rgba(119, 169, 255, .10)
+        }
+
+        .chip--g {
+            border-color: rgba(47, 229, 157, .34);
+            background: rgba(47, 229, 157, .10)
+        }
+
+        .chip--w {
+            border-color: rgba(243, 201, 105, .34);
+            background: rgba(243, 201, 105, .10)
+        }
+
+        .chip--r {
+            border-color: rgba(255, 124, 147, .34);
+            background: rgba(255, 124, 147, .10)
+        }
+
+        .button {
+            border: 1px solid rgba(132, 163, 208, .3);
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .03));
+            color: var(--text);
+            padding: 11px 14px;
+            cursor: pointer;
+            transition: .15s
+        }
+
+        .button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(100, 230, 207, .45)
+        }
+
+        .button--wide {
+            width: 100%
+        }
+
+        .button--sm {
+            padding: 8px 11px;
+            border-radius: 12px;
+            font-size: 12px
+        }
+
+        .button--ghost {
+            background: rgba(255, 255, 255, .03)
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: var(--r);
+            background: var(--panel);
+            box-shadow: var(--shadow)
+        }
+
+        .card {
+            padding: 16px
+        }
+
+        .topline, .statusline, .titleline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center
+        }
+
+        .topline {
+            margin-bottom: 12px
+        }
+
+        .statusline {
+            justify-content: flex-end
+        }
+
+        .titleline {
+            justify-content: space-between;
+            margin-bottom: 14px
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns:repeat(5, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 16px
+        }
+
+        .summary .panel {
+            padding: 16px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .02))
+        }
+
+        .summary h2 {
+            margin: 0;
+            color: var(--muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .12em
+        }
+
+        .summary .value {
+            margin-top: 10px;
+            font-size: 30px;
+            font-weight: 700;
+            line-height: 1
+        }
+
+        .summary .sub {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.4
+        }
+
+        .filters {
+            position: relative;
+            margin: 16px 0 14px
+        }
+
+        .filter-panel {
+            position: absolute;
+            left: 0;
+            top: calc(100% + 10px);
+            z-index: 20;
+            width: min(358px, calc(100vw - 40px));
+            padding: 14px;
+            border: 1px solid rgba(132, 163, 208, .3);
+            border-radius: 18px;
+            background: rgba(8, 15, 28, .98);
+            box-shadow: var(--shadow)
+        }
+
+        .filter-panel[hidden] {
+            display: none
+        }
+
+        .filter-panel h3 {
+            margin: 0 0 10px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--muted)
+        }
+
+        .grid2 {
+            display: grid;
+            grid-template-columns:1fr 1fr;
+            gap: 10px
+        }
+
+        .full {
+            grid-column: 1/-1
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px
+        }
+
+        .field label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: var(--muted)
+        }
+
+        .field input, .field select {
+            width: 100%;
+            border: 1px solid rgba(132, 163, 208, .24);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, .04);
+            color: var(--text);
+            padding: 10px 12px;
+            outline: none
+        }
+
+        .field input:focus, .field select:focus {
+            border-color: rgba(100, 230, 207, .55);
+            box-shadow: 0 0 0 3px rgba(100, 230, 207, .12)
+        }
+
+        .filter-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            margin-top: 12px
+        }
+
+        .hint {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.4
+        }
+
+        .sidebar-card {
+            padding: 14px;
+            margin-top: 12px
+        }
+
+        .section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 14px
+        }
+
+        .section-title h2 {
+            margin: 0;
+            font-size: 15px
+        }
+
+        .section-title span {
+            color: var(--muted);
+            font-size: 12px
+        }
+
+        .runlist {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: calc(100vh - 260px);
+            overflow: auto;
+            padding-right: 4px
+        }
+
+        .run {
+            width: 100%;
+            text-align: left;
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(132, 163, 208, .18);
+            background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .03));
+            color: var(--text);
+            cursor: pointer;
+            transition: .15s
+        }
+
+        .run:hover {
+            transform: translateY(-1px);
+            border-color: rgba(119, 169, 255, .42)
+        }
+
+        .run.active {
+            border-color: rgba(100, 230, 207, .6);
+            background: linear-gradient(180deg, rgba(100, 230, 207, .12), rgba(255, 255, 255, .04));
+            box-shadow: 0 0 0 1px rgba(100, 230, 207, .2)
+        }
+
+        .run-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px
+        }
+
+        .run h3 {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.4;
+            word-break: break-word
+        }
+
+        .run .meta {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            white-space: nowrap
+        }
+
+        .badge[data-tone="running"] {
+            border-color: rgba(47, 229, 157, .35);
+            background: rgba(47, 229, 157, .1);
+            color: #95f6c8
+        }
+
+        .badge[data-tone="success"], .badge[data-tone="completed"], .badge[data-tone="done"] {
+            border-color: rgba(100, 230, 207, .35);
+            background: rgba(100, 230, 207, .1);
+            color: #a5fff1
+        }
+
+        .badge[data-tone="failed"], .badge[data-tone="error"] {
+            border-color: rgba(255, 124, 147, .38);
+            background: rgba(255, 124, 147, .1);
+            color: #ffb1c0
+        }
+
+        .badge[data-tone="warning"] {
+            border-color: rgba(243, 201, 105, .38);
+            background: rgba(243, 201, 105, .1);
+            color: #ffe1a4
+        }
+
+        .main {
+            display: grid;
+            grid-template-columns:minmax(340px, 1.05fr) minmax(0, 1.25fr);
+            gap: 16px;
+            align-items: start
+        }
+
+        .stack {
+            display: grid;
+            gap: 16px
+        }
+
+        .selected-title {
+            margin: 0 0 6px;
+            font-size: 24px;
+            line-height: 1.1;
+            word-break: break-word
+        }
+
+        .selected-sub {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.5
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns:repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 14px
+        }
+
+        .meta {
+            padding: 12px 14px;
+            border: 1px solid rgba(132, 163, 208, .16);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, .03)
+        }
+
+        .meta .k {
+            color: var(--muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            margin-bottom: 8px
+        }
+
+        .meta .v {
+            font-size: 14px;
+            line-height: 1.45;
+            word-break: break-word
+        }
+
+        .nodes, .events {
+            display: grid;
+            gap: 10px
+        }
+
+        .nodes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            max-width: 100%;
+            padding: 7px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(132, 163, 208, .18);
+            background: rgba(255, 255, 255, .04);
+            font-size: 12px;
+            word-break: break-word
+        }
+
+        .tag {
+            padding: 5px 9px;
+            color: var(--muted);
+            font-size: 11px
+        }
+
+        .edge {
+            display: grid;
+            grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr);
+            gap: 10px;
+            align-items: center;
+            padding: 12px 14px;
+            border: 1px solid rgba(132, 163, 208, .16);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, .03)
+        }
+
+        .edge .arrow {
+            color: var(--a);
+            font-weight: 700;
+            letter-spacing: .1em
+        }
+
+        .edge .label {
+            grid-column: 1/-1;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45
+        }
+
+        .eventlist {
+            display: grid;
+            gap: 10px;
+            max-height: 560px;
+            overflow: auto;
+            padding-right: 4px
+        }
+
+        .event {
+            padding: 12px 14px;
+            border: 1px solid rgba(132, 163, 208, .16);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, .03)
+        }
+
+        .event-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: flex-start;
+            margin-bottom: 10px
+        }
+
+        .event-title {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 4px;
+            font-weight: 700
+        }
+
+        .event-stage {
+            font-size: 12px;
+            line-height: 1.4
+        }
+
+        .event-ts {
+            color: var(--muted);
+            font-size: 12px;
+            white-space: nowrap
+        }
+
+        .event-label {
+            font-size: 13px;
+            line-height: 1.5;
+            margin: 0 0 10px;
+            word-break: break-word
+        }
+
+        .payload {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border: 1px solid rgba(132, 163, 208, .16);
+            border-radius: 14px;
+            background: rgba(3, 7, 14, .55);
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow: auto;
+            font-size: 12px;
+            line-height: 1.5;
+            font-family: Consolas, "SFMono-Regular", "Courier New", monospace
+        }
+
+        .empty {
+            padding: 20px;
+            border: 1px dashed rgba(132, 163, 208, .24);
+            border-radius: 16px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, .02);
+            line-height: 1.5;
+            font-size: 13px
+        }
+
+        .muted {
+            color: var(--muted)
+        }
+
+        .sync {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px
+        }
+
+        @media (max-width: 1320px) {
+            .app {
+                grid-template-columns:340px minmax(0, 1fr)
+            }
+
+            .summary {
+                grid-template-columns:repeat(3, minmax(0, 1fr))
+            }
+
+            .meta-grid {
+                grid-template-columns:repeat(2, minmax(0, 1fr))
+            }
+        }
+
+        @media (max-width: 980px) {
+            .app {
+                grid-template-columns:1fr
+            }
+
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--line)
+            }
+
+            .runlist {
+                max-height: 38vh
+            }
+
+            .summary {
+                grid-template-columns:repeat(2, minmax(0, 1fr))
+            }
+
+            .main {
+                grid-template-columns:1fr
+            }
+        }
+
+        @media (max-width: 720px) {
+            .sidebar, .workspace {
+                padding-left: 14px;
+                padding-right: 14px
+            }
+
+            .summary, .meta-grid, .grid2, .edge {
+                grid-template-columns:1fr
+            }
+
+            .statusline {
+                justify-content: flex-start
+            }
+
+            .sync {
+                align-items: flex-start
+            }
+
+            .filter-panel {
+                width: min(100%, calc(100vw - 28px))
+            }
+
+            .selected-title {
+                font-size: 20px
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">
+            <div><h1>Agent Debug UI</h1>
+                <p>Run explorer, event timeline, and flow details backed by <code>/api/state</code>.</p></div>
+            <span class="chip chip--a" id="connectionChip">loading</span></div>
+        <div class="topline" id="summaryChips"></div>
+        <div class="filters">
+            <button class="button button--wide" id="filterToggle" type="button">Open filters</button>
+            <div class="filter-panel" hidden id="filterPanel"><h3>Filter panel</h3>
+                <div class="grid2">
+                    <div class="field"><label for="runStatus">Run status</label><select id="runStatus"></select></div>
+                    <div class="field"><label for="runSource">Run source</label><select id="runSource"></select></div>
+                    <div class="field full"><label for="runSearch">Run search</label><input id="runSearch" placeholder="Search run id, user, query, reply, error..."
+                                                                                            type="search"/>
+                    </div>
+                    <div class="field"><label for="eventType">Event type</label><select id="eventType"></select></div>
+                    <div class="field"><label for="eventStage">Event stage</label><select id="eventStage"></select>
+                    </div>
+                    <div class="field full"><label for="eventSearch">Event search</label><input id="eventSearch"
+                                                                                                placeholder="Search event label, stage, payload, timestamp..."
+                                                                                                type="search"/>
+                    </div>
+                </div>
+                <div class="filter-actions"><span class="hint">Auto-closes after a short timeout.</span>
+                    <button class="button button--sm button--ghost" id="clearFilters" type="button">Clear filters
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="panel card sidebar-card">
+            <div class="section-title"><h2>Runs</h2><span id="runListCount">0 visible</span></div>
+            <div class="runlist" id="runList"></div>
+        </div>
+    </aside>
+    <main class="workspace">
+        <div class="sync">
+            <div>
+                <div class="hint" id="serverTime">Waiting for state...</div>
+                <div class="hint">Filters apply live as the snapshot refreshes every 1.5 seconds.</div>
+            </div>
+            <div class="statusline" id="statusLine"></div>
+        </div>
+        <div class="summary" id="summaryGrid"></div>
+        <div class="main">
+            <section class="panel card">
+                <div class="section-title"><h2>Selected Run</h2><span id="selectedRunState">No selection</span></div>
+                <div id="selectedRunBody"></div>
+            </section>
+            <div class="stack">
+                <section class="panel card">
+                    <div class="section-title"><h2>Message Flow</h2><span id="flowCount">0 edges</span></div>
+                    <div id="flowBody"></div>
+                </section>
+                <section class="panel card">
+                    <div class="section-title"><h2>Events</h2><span id="eventCount">0 visible</span></div>
+                    <div id="eventBody"></div>
+                </section>
+            </div>
+        </div>
+    </main>
+</div>
+<script>
+    const AUTO_CLOSE_MS = 4200;
+    const POLL_MS = 1500;
+    const INTERACTION_GRACE_MS = 1800;
+    const state = {runs: [], events: [], server_time: null};
+    const filters = {
+        runStatus: 'all',
+        runSource: 'all',
+        runSearch: '',
+        eventType: 'all',
+        eventStage: 'all',
+        eventSearch: ''
+    };
+    const ui = {
+        selectedRunId: null,
+        filterTimer: null,
+        filterOpen: false,
+        lastInputAt: 0,
+        optionsCache: {},
+        dataHash: "",
+    };
+    const els = {};
+
+    function esc(v) {
+        return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+    }
+
+    function s(v) {
+        return String(v ?? '').trim();
+    }
+
+    function l(v) {
+        return s(v).toLowerCase();
+    }
+
+    function json(v) {
+        try {
+            return JSON.stringify(v, null, 2);
+        } catch {
+            return String(v);
+        }
+    }
+
+    function dt(v) {
+        const d = v ? new Date(v) : null;
+        return d && !Number.isNaN(d.getTime()) ? d : null;
+    }
+
+    function ts(v) {
+        const d = dt(v);
+        return d ? d.toLocaleString() : 'Unknown';
+    }
+
+    function dur(a, b) {
+        const start = dt(a);
+        if (!start) return 'Unknown';
+        const end = dt(b) || new Date();
+        const sec = Math.max(0, (end - start) / 1000);
+        if (sec < 1) return '< 1s';
+        if (sec < 60) return `${sec.toFixed(sec < 10 ? 1 : 0)}s`;
+        const m = Math.floor(sec / 60);
+        return `${m}m ${String(Math.round(sec % 60)).padStart(2, '0')}s`;
+    }
+
+    function tone(v) {
+        const t = l(v);
+        if (['running', 'active', 'in_progress'].includes(t)) return 'running';
+        if (['failed', 'error', 'crashed'].includes(t)) return 'failed';
+        if (['warning', 'partial'].includes(t)) return 'warning';
+        if (['done', 'completed', 'success', 'succeeded', 'finished'].includes(t)) return 'success';
+        return t || 'ghost';
+    }
+
+    function pill(cls, text) {
+        return `<span class="chip ${cls}">${esc(text)}</span>`;
+    }
+
+    function badge(text, t) {
+        return `<span class="badge" data-tone="${esc(t)}">${esc(text)}</span>`;
+    }
+
+    function payloadHtml(payload) {
+        if (!payload || (typeof payload === 'object' && Object.keys(payload).length === 0)) return '';
+        return `<details><summary class="hint">payload</summary><pre class="payload">${esc(json(payload))}</pre></details>`;
+    }
+
+    function unique(values) {
+        return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+    }
+
+    function eventsOf(run) {
+        return Array.isArray(run?.events) ? run.events : [];
+    }
+
+    function runEvents() {
+        return state.runs.flatMap(eventsOf);
+    }
+
+    function sortNewest(list, key) {
+        return [...list].sort((a, b) => (dt(b?.[key])?.getTime() || 0) - (dt(a?.[key])?.getTime() || 0));
+    }
+
+    function toneChip(t) {
+        return t === 'running' ? 'chip--g' : t === 'failed' ? 'chip--r' : t === 'warning' ? 'chip--w' : t === 'success' ? 'chip--a' : 'chip';
+    }
+
+    function isInteractive(el) {
+        return !!el && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+    }
+
+    function isUserInteracting() {
+        return (Date.now() - ui.lastInputAt) < INTERACTION_GRACE_MS || isInteractive(document.activeElement);
+    }
+
+    function setHtmlIfChanged(el, html) {
+        const next = String(html ?? "");
+        if (el.__renderedHtml === next) return false;
+        el.innerHTML = next;
+        el.__renderedHtml = next;
+        return true;
+    }
+
+    function hashObject(value) {
+        const text = JSON.stringify(value ?? "");
+        let hash = 2166136261;
+        for (let i = 0; i < text.length; i += 1) {
+            hash ^= text.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return String(hash >>> 0);
+    }
+
+    function normalizeSelection() {
+        if (!state.runs.length) {
+            ui.selectedRunId = null;
+            return;
+        }
+        if (ui.selectedRunId && state.runs.some((r) => r.run_id === ui.selectedRunId)) return;
+        ui.selectedRunId = state.runs[0].run_id;
+    }
+
+    function visibleRuns() {
+        return state.runs.filter(matchRun);
+    }
+
+    function selectedRun() {
+        if (!state.runs.length) return null;
+        if (ui.selectedRunId) {
+            const found = state.runs.find((r) => r.run_id === ui.selectedRunId);
+            if (found) return found;
+        }
+        ui.selectedRunId = state.runs[0].run_id;
+        return state.runs[0];
+    }
+
+    function visibleEvents(run) {
+        return eventsOf(run).filter(matchEvent);
+    }
+
+    function collectOptions() {
+        return {
+            statuses: unique(state.runs.map((r) => s(r.status))),
+            sources: unique(state.runs.map((r) => s(r.source))),
+            types: unique(runEvents().map((e) => s(e.type))),
+            stages: unique(runEvents().map((e) => s(e.stage))),
+        };
+    }
+
+    function readFilters() {
+        filters.runStatus = els.runStatus.value || 'all';
+        filters.runSource = els.runSource.value || 'all';
+        filters.runSearch = els.runSearch.value.trim();
+        filters.eventType = els.eventType.value || 'all';
+        filters.eventStage = els.eventStage.value || 'all';
+        filters.eventSearch = els.eventSearch.value.trim();
+    }
+
+    function matchRun(run) {
+        if (filters.runStatus !== 'all' && s(run.status) !== filters.runStatus) return false;
+        if (filters.runSource !== 'all' && s(run.source) !== filters.runSource) return false;
+        const q = l(filters.runSearch);
+        if (!q) return true;
+        return [run.run_id, run.status, run.source, run.username, run.chat_id, run.topic_id, run.query, run.reply_preview, run.error, run.created_at, run.ended_at].map(l).join(' ').includes(q);
+    }
+
+    function matchEvent(ev) {
+        if (filters.eventType !== 'all' && s(ev.type) !== filters.eventType) return false;
+        if (filters.eventStage !== 'all' && s(ev.stage) !== filters.eventStage) return false;
+        const q = l(filters.eventSearch);
+        if (!q) return true;
+        return [ev.type, ev.stage, ev.label, ev.ts, json(ev.payload)].map(l).join(' ').includes(q);
+    }
+
+    function renderFilterOptions() {
+        const opts = collectOptions();
+        const build = (list, allText) => ['all', ...list].map((v) => `<option value="${esc(v)}">${v === 'all' ? allText : esc(v)}</option>`).join('');
+
+        const runStatusHtml = build(opts.statuses, 'All statuses');
+        const runSourceHtml = build(opts.sources, 'All sources');
+        const eventTypeHtml = build(opts.types, 'All types');
+        const eventStageHtml = build(opts.stages, 'All stages');
+
+        if (ui.optionsCache.runStatus !== runStatusHtml && document.activeElement !== els.runStatus) {
+            els.runStatus.innerHTML = runStatusHtml;
+            ui.optionsCache.runStatus = runStatusHtml;
+        }
+        if (ui.optionsCache.runSource !== runSourceHtml && document.activeElement !== els.runSource) {
+            els.runSource.innerHTML = runSourceHtml;
+            ui.optionsCache.runSource = runSourceHtml;
+        }
+        if (ui.optionsCache.eventType !== eventTypeHtml && document.activeElement !== els.eventType) {
+            els.eventType.innerHTML = eventTypeHtml;
+            ui.optionsCache.eventType = eventTypeHtml;
+        }
+        if (ui.optionsCache.eventStage !== eventStageHtml && document.activeElement !== els.eventStage) {
+            els.eventStage.innerHTML = eventStageHtml;
+            ui.optionsCache.eventStage = eventStageHtml;
+        }
+
+        els.runStatus.value = ['all', ...opts.statuses].includes(filters.runStatus) ? filters.runStatus : 'all';
+        els.runSource.value = ['all', ...opts.sources].includes(filters.runSource) ? filters.runSource : 'all';
+        els.eventType.value = ['all', ...opts.types].includes(filters.eventType) ? filters.eventType : 'all';
+        els.eventStage.value = ['all', ...opts.stages].includes(filters.eventStage) ? filters.eventStage : 'all';
+    }
+
+    function statusCounts(runs) {
+        const m = new Map();
+        for (const run of runs) {
+            const key = s(run.status) || 'unknown';
+            m.set(key, (m.get(key) || 0) + 1);
+        }
+        return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5).map(([status, count]) => pill(toneChip(tone(status)), `${status}: ${count}`)).join('');
+    }
+
+    function renderSummary(runs, visible, run, events) {
+        const running = runs.filter((r) => l(r.status) === 'running').length;
+        const done = runs.filter((r) => ['done', 'completed', 'success', 'succeeded', 'finished'].includes(l(r.status))).length;
+        const failed = runs.filter((r) => ['failed', 'error', 'crashed'].includes(l(r.status))).length;
+        const totalEvents = state.events.length;
+        const summaryGridHtml = [
+            {h: 'Runs', v: runs.length, s: `${visible.length} visible under current filters`},
+            {h: 'Running', v: running, s: 'Currently active runs'},
+            {h: 'Completed', v: done, s: 'Finished or successful runs'},
+            {h: 'Failed', v: failed, s: 'Errors, crashes, and failed runs'},
+            {h: 'Events', v: totalEvents, s: `${events.length} visible on the selected run`},
+        ].map((c) => `<article class="panel"><h2>${c.h}</h2><div class="value">${c.v}</div><div class="sub">${esc(c.s)}</div></article>`).join('');
+        const summaryChipsHtml = [
+            pill('chip--b', `Visible runs: ${visible.length}`),
+            pill('chip--a', `Global events: ${totalEvents}`),
+            run ? pill(toneChip(tone(run.status)), `Selected: ${run.status || 'unknown'}`) : pill('chip', 'No run selected'),
+            statusCounts(runs),
+        ].join('');
+        const statusLineHtml = [
+            filters.runStatus !== 'all' ? pill('chip', `status: ${filters.runStatus}`) : '',
+            filters.runSource !== 'all' ? pill('chip', `source: ${filters.runSource}`) : '',
+            filters.runSearch ? pill('chip', `run search: ${filters.runSearch}`) : '',
+            filters.eventType !== 'all' ? pill('chip', `event type: ${filters.eventType}`) : '',
+            filters.eventStage !== 'all' ? pill('chip', `event stage: ${filters.eventStage}`) : '',
+            filters.eventSearch ? pill('chip', `event search: ${filters.eventSearch}`) : '',
+        ].filter(Boolean).join('');
+        setHtmlIfChanged(els.summaryGrid, summaryGridHtml);
+        setHtmlIfChanged(els.summaryChips, summaryChipsHtml);
+        setHtmlIfChanged(els.statusLine, statusLineHtml);
+    }
+
+    function renderRuns(list) {
+        els.runListCount.textContent = `${list.length} visible`;
+        if (!list.length) {
+            setHtmlIfChanged(els.runList, `<div class="empty">No runs match the current filters.</div>`);
+            return;
+        }
+        const runsHtml = list.map((run) => `<button class="run ${run.run_id === ui.selectedRunId ? 'active' : ''}" type="button" data-run-id="${esc(run.run_id)}"><div class="run-head"><span class="badge" data-tone="${esc(tone(run.status))}">${esc(run.status || 'unknown')}</span><span class="pill tag">${esc(run.source || 'unknown source')}</span></div><h3>${esc(run.query || '(empty query)')}</h3><div class="meta">${esc(run.username || 'unknown user')} · chat ${esc(run.chat_id ?? 'n/a')} · ${esc(ts(run.created_at))}<br/>${run.ended_at ? `ended ${esc(ts(run.ended_at))} · ` : ''}duration ${esc(dur(run.created_at, run.ended_at))}</div></button>`).join('');
+        const changed = setHtmlIfChanged(els.runList, runsHtml);
+        if (!changed) return;
+        els.runList.querySelectorAll('[data-run-id]').forEach((button) => button.addEventListener('click', () => {
+            ui.selectedRunId = button.getAttribute('data-run-id');
+            renderAll(true);
+        }));
+    }
+
+    function renderSelected(run) {
+        if (!run) {
+            els.selectedRunState.textContent = 'No selection';
+            setHtmlIfChanged(els.selectedRunBody, `<div class="empty">No run data is available yet.</div>`);
+            return;
+        }
+        els.selectedRunState.textContent = `${run.status || 'unknown'} · ${run.run_id}`;
+        const selectedHtml = `<div><h3 class="selected-title">${esc(run.query || '(empty query)')}</h3><div class="selected-sub">source ${esc(run.source || 'unknown')} · user ${esc(run.username || 'unknown')} · chat ${esc(run.chat_id ?? 'n/a')} · topic ${esc(run.topic_id ?? 'n/a')}</div><div class="topline" style="margin-top:14px"><span class="badge" data-tone="${esc(tone(run.status))}">${esc(run.status || 'unknown')}</span>${pill('chip--b', `Run ID: ${run.run_id}`)}${pill('chip', `Duration: ${dur(run.created_at, run.ended_at)}`)}</div><div class="meta-grid"><div class="meta"><div class="k">Created</div><div class="v">${esc(ts(run.created_at))}</div></div><div class="meta"><div class="k">Ended</div><div class="v">${esc(run.ended_at ? ts(run.ended_at) : 'In progress')}</div></div><div class="meta"><div class="k">Topic</div><div class="v">${esc(run.topic_id ?? 'n/a')}</div></div><div class="meta"><div class="k">Reply preview</div><div class="v">${esc(s(run.reply_preview) || 'No reply preview')}</div></div><div class="meta"><div class="k">Error</div><div class="v">${esc(s(run.error) || 'None')}</div></div><div class="meta"><div class="k">Flow nodes</div><div class="v">${esc((run.flow?.nodes || []).length)}</div></div></div></div>`;
+        setHtmlIfChanged(els.selectedRunBody, selectedHtml);
+    }
+
+    function renderFlow(run) {
+        if (!run) {
+            els.flowCount.textContent = '0 edges';
+            setHtmlIfChanged(els.flowBody, `<div class="empty">Select a run to inspect its flow.</div>`);
+            return;
+        }
+        const flow = run.flow || {}, nodes = Array.isArray(flow.nodes) ? flow.nodes : [],
+            edges = Array.isArray(flow.edges) ? flow.edges : [];
+        els.flowCount.textContent = `${edges.length} edge${edges.length === 1 ? '' : 's'}`;
+        const nodesHtml = nodes.length ? `<div class="nodes">${nodes.map((n) => `<span class="pill">${esc(n)}</span>`).join('')}</div>` : `<div class="empty">No flow nodes recorded.</div>`;
+        const edgesHtml = edges.length ? `<div class="events">${edges.map((e) => `<div class="edge"><div><span class="pill">${esc(e.from || 'unknown')}</span></div><div class="arrow">→</div><div><span class="pill">${esc(e.to || 'unknown')}</span></div><div class="label">${esc(e.label || '')}${e.kind ? ` · <span class="tag">${esc(e.kind)}</span>` : ''}${e.ts ? ` · ${esc(ts(e.ts))}` : ''}</div></div>`).join('')}</div>` : `<div class="empty">No flow edges recorded for this run.</div>`;
+        setHtmlIfChanged(els.flowBody, nodesHtml + edgesHtml);
+    }
+
+    function renderEvents(run) {
+        const events = visibleEvents(run);
+        els.eventCount.textContent = `${events.length} visible`;
+        if (!run) {
+            setHtmlIfChanged(els.eventBody, `<div class="empty">Select a run to inspect its events.</div>`);
+            return;
+        }
+        if (!events.length) {
+            setHtmlIfChanged(els.eventBody, `<div class="empty">No events match the current filters for this run.</div>`);
+            return;
+        }
+        const previousList = els.eventBody.querySelector(".eventlist");
+        const previousTop = previousList ? previousList.scrollTop : 0;
+        const eventsHtml = `<div class="eventlist">${sortNewest(events, 'ts').map((e) => `<article class="event"><div class="event-top"><div><div class="event-title">${badge(e.type || 'event', tone(e.type))}${e.stage ? `<span class="tag">${esc(e.stage)}</span>` : ''}</div><div class="event-stage">${esc(e.label || 'No label')}</div></div><div class="event-ts">${esc(ts(e.ts))}</div></div>${payloadHtml(e.payload)}</article>`).join('')}</div>`;
+        const changed = setHtmlIfChanged(els.eventBody, eventsHtml);
+        if (!changed || !previousList) return;
+        const nextList = els.eventBody.querySelector(".eventlist");
+        if (nextList) nextList.scrollTop = previousTop;
+    }
+
+    function renderConnection() {
+        const total = state.events.length;
+        els.connectionChip.textContent = total ? 'live' : 'idle';
+        els.connectionChip.className = `chip ${total ? 'chip--a' : 'chip'}`;
+        els.serverTime.textContent = state.server_time ? `Server snapshot: ${ts(state.server_time)}` : 'Waiting for state...';
+    }
+
+    function openPanel() {
+        clearTimeout(ui.filterTimer);
+        ui.filterOpen = true;
+        els.filterPanel.hidden = false;
+        ui.filterTimer = setTimeout(closePanel, AUTO_CLOSE_MS);
+    }
+
+    function closePanel() {
+        clearTimeout(ui.filterTimer);
+        ui.filterTimer = null;
+        ui.filterOpen = false;
+        els.filterPanel.hidden = true;
+    }
+
+    function togglePanel() {
+        ui.filterOpen ? closePanel() : openPanel();
+    }
+
+    function clearFilters() {
+        els.runStatus.value = 'all';
+        els.runSource.value = 'all';
+        els.runSearch.value = '';
+        els.eventType.value = 'all';
+        els.eventStage.value = 'all';
+        els.eventSearch.value = '';
+        ui.lastInputAt = Date.now();
+        readFilters();
+        renderAll(true);
+    }
+
+    function renderAll(force = false) {
+        if (!force && isUserInteracting()) {
+            renderConnection();
+            return;
+        }
+        normalizeSelection();
+        renderFilterOptions();
+        const run = selectedRun();
+        const visible = visibleRuns();
+        const events = visibleEvents(run);
+        renderSummary(state.runs, visible, run, events);
+        renderRuns(visible);
+        renderSelected(run);
+        renderFlow(run);
+        renderEvents(run);
+        renderConnection();
+    }
+
+    function bind() {
+        els.filterToggle.addEventListener('click', togglePanel);
+        els.clearFilters.addEventListener('click', clearFilters);
+        [els.runStatus, els.runSource, els.runSearch, els.eventType, els.eventStage, els.eventSearch].forEach((el) => {
+            const handler = () => {
+                ui.lastInputAt = Date.now();
+                readFilters();
+                renderAll(true);
+            };
+            el.addEventListener('input', handler);
+            el.addEventListener('change', handler);
+            el.addEventListener('focus', () => {
+                ui.lastInputAt = Date.now();
+            });
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePanel();
+        });
+        document.addEventListener('click', (e) => {
+            if (!ui.filterOpen) return;
+            if (els.filterPanel.contains(e.target) || els.filterToggle.contains(e.target)) return;
+            closePanel();
+        });
+    }
+
+    function cache() {
+        ['summaryChips', 'filterToggle', 'filterPanel', 'runStatus', 'runSource', 'runSearch', 'eventType', 'eventStage', 'eventSearch', 'clearFilters', 'runList', 'runListCount', 'serverTime', 'statusLine', 'summaryGrid', 'selectedRunState', 'selectedRunBody', 'flowCount', 'flowBody', 'eventCount', 'eventBody', 'connectionChip'].forEach((id) => {
+            els[id] = document.getElementById(id);
+        });
+    }
+
+    function boot() {
+        cache();
+        bind();
+        readFilters();
+        refresh();
+        setInterval(refresh, POLL_MS);
+    }
+
+    async function refresh() {
+        try {
+            const res = await fetch('/api/state', {cache: 'no-store'});
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const next = await res.json();
+            state.runs = Array.isArray(next.runs) ? next.runs : [];
+            state.events = Array.isArray(next.events) ? next.events : [];
+            state.server_time = next.server_time || null;
+            const nextHash = hashObject({runs: state.runs, events: state.events});
+            if (nextHash !== ui.dataHash) {
+                ui.dataHash = nextHash;
+                renderAll();
+            } else {
+                renderConnection();
+            }
+        } catch (err) {
+            els.connectionChip.textContent = 'offline';
+            els.connectionChip.className = 'chip chip--r';
+            els.serverTime.textContent = 'Failed to load /api/state';
+        }
+    }
+
+    boot();
+</script>
+</body>
+</html>

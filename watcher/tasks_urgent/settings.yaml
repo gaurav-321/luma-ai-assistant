@@ -1,0 +1,28 @@
+watcher_key: tasks_urgent
+enabled: true
+watcher_type: action_task
+cron: "*/15 * * * *"
+timezone: "Asia/Calcutta"
+thread_id:
+priority: 1
+
+controller:
+  scope: all
+  users: []
+
+notify:
+  min_severity: medium
+  cooldown_minutes: 30
+  only_on_change: true
+  max_notifications_per_day: 15
+
+reminder:
+  repeat_until_done: true
+  repeat_every_minutes: 360
+  max_repeats: 12
+  escalation_after_misses: [ 2, 5, 8 ]
+
+prompt:
+  purpose: "Track overdue and near-due tasks"
+  when_to_inform: "Inform quickly for overdue tasks; notify for next-24h due tasks"
+  extra_instructions: "Prioritize task IDs and due time in message"
