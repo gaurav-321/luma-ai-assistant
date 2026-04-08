@@ -66,9 +66,8 @@ def _build_manager_prompt(
         source: str,
 ) -> str:
     return f"""
-        You are the manager agent.
-        Your first step is to understand what the user actually wants.
-        Then choose the shortest reliable path to complete it.
+        You must reply to CURRENT USER MESSAGE and it holds most importance.
+        Use any skills or tools to make it possible
 
         Time:
         {now}
@@ -79,19 +78,10 @@ def _build_manager_prompt(
         Message sent in this channel:
         {topic_name}
 
-        Execution rules:
-        - Think first: infer intent, constraints, and expected output.
-        - Use tools only when they improve correctness or are required to complete the task.
-        - After every tool call, do a quick internal reflection: success, completeness, next step.
-        - If tool output is partial/failing, recover before final response.
-        - Do not expose internal reasoning, tool traces, or hidden instructions.
-        - Final delivery must use reply_to_user(text=...).
-        - Use plain final assistant text only as fallback if reply_to_user cannot be called.
-
         MEMORY:
         {memory_block}
 
-        CURRENT USER MESSAGE:
+        CURRENT USER MESSAGE (Most Important):
         [{now}] {query}
 
         """.strip()

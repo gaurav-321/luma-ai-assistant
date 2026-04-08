@@ -207,7 +207,7 @@ def _build_scheduled_work_item(username: str, chat_id: int, job_row: sqlite3.Row
         "- `crontab-scheduler`: inspect/update schedule metadata and activation.\n"
         "- `researcher`: external research when local data is insufficient.\n"
         "- `telegram`: topic management or explicit topic-targeted sends.\n"
-        "- `sandbox`: shell/python/filesystem operations for validation/automation.\n\n"
+        "- `local_sandbox`: shell/python/filesystem operations for validation/automation.\n\n"
         "Task objective:\n"
         f"{prompt}"
     )

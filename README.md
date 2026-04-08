@@ -1,72 +1,82 @@
-# Crew Personal Agents
 
-Telegram-first multi-agent runtime with worker queues, scheduler jobs, watchers, and skill execution.
-This repository runs in **single-user mode** using the fixed profile at `users/default`.
+This project provides a small tool interface for an isolated execution sandbox.  
+It lets an agent run Python code, run shell commands, and read/write/list files through a local HTTP sandbox server.
 
-## Setup
+## What This Project Does
 
-1. Create virtual environment and install dependencies.
-2. Copy `.env.example` to `.env`.
-3. Fill required values in `.env`:
-- `TELEGRAM_BOT_TOKEN`
-- `GROUP_GENERAL_CHAT_ID` (primary allowed/delivery group chat)
-- Access control:
-  - `ALLOWED_USERNAMES` (comma-separated usernames without `@`)
-  - Incoming messages are accepted if group chat ID matches `GROUP_GENERAL_CHAT_ID` or username matches.
-- `OLLAMA_*` and `QDRANT_*` values for your infra
+- Exposes a single entry point in `tool.py` with operation-based routing.
+- Implements an HTTP client in `sandbox_tools.py` for sandbox endpoints.
+- Normalizes responses into a stable JSON shape so tool-calling systems can consume output reliably.
+- Auto-manages sandbox sessions and includes helpers for switching/reusing sessions.
 
-PowerShell quick start:
+## How It Works
 
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env
-python start.py
+`tool.py` receives:
+
+```json
+{
+  "operation": "cmd_run",
+  "payload": {"cmd": "echo hi"}
+}
 ```
 
-## Environment And Secrets
+It dispatches to the matching async function in `sandbox_tools.py`.
 
-- All operational credentials and host settings must stay in `.env`.
-- `.env` is git-ignored by default.
-- Do not hard-code tokens/keys in Python files.
+Supported operations:
 
-## Git Upload Checklist
+- `init_llm_tools`: initialize client + health check + ensure session
+- `py_run`: execute Python in current sandbox session
+- `fs_write`: write a file in session workspace
+- `fs_read`: read a file in session workspace
+- `fs_list`: list files/directories in session workspace
+- `cmd_run`: execute shell command in session workspace
 
-Before pushing:
+The client talks to a sandbox server (default `http://127.0.0.1:1000`) using:
 
-1. Ensure `.env` is not staged.
-2. Ensure runtime files are not staged (`*.sqlite`, logs, `__pycache__`).
-3. Confirm only code/docs/config template changes are committed.
+- `POST /sessions`
+- `GET /health`
+- `POST /py/run`
+- `POST /fs/write`
+- `GET /fs/read`
+- `POST /fs/list`
+- `POST /cmd/run`
 
-Useful command:
+## Linux Setup
 
-```powershell
-git status --short
+Run:
+
+```bash
+chmod +x setup_linux.sh
+./setup_linux.sh
 ```
 
-## Backup And Restore
+The script:
 
-Important runtime data is usually:
+1. Creates `.venv`
+2. Installs `requests`
+3. Verifies local module import paths
 
-- `.env`
-- `users\default\data.sqlite`
-- `watcher\data\watcher.db`
+## Usage
 
-### Backup (PowerShell)
+Activate venv:
 
-```powershell
-.\scripts\backup_state.ps1
+```bash
+source .venv/bin/activate
 ```
 
-### Restore (PowerShell)
+Run built-in smoke tests:
 
-```powershell
-.\scripts\restore_state.ps1 -BackupDir "backups\YYYYMMDD_HHMMSS"
+```bash
+python tool.py
 ```
 
-After restore, restart the app:
+Set custom sandbox URL if needed:
 
-```powershell
-python start.py
+```bash
+export SANDBOX_BASE_URL="http://127.0.0.1:1000"
 ```
+
+## Notes
+
+- `tool.py` inserts repository root into `sys.path` so `skills.work.sandbox` imports resolve.
+- `sandbox_tools.py` normalizes command output and tries to fix garbled UTF-16LE output from some Windows command cases.
