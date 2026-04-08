@@ -32,7 +32,7 @@ Main flow (detailed):
 
 ```python
 run_skill_script(
-  skill_name="local_sandbox",
+  skill_name="sandbox",
   script_name="tool.py",
   args={
     "operation": "cmd_run",
@@ -45,7 +45,7 @@ Then file update:
 
 ```python
 run_skill_script(
-  skill_name="local_sandbox",
+  skill_name="sandbox",
   script_name="tool.py",
   args={
     "operation": "fs_write",

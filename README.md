@@ -1,82 +1,88 @@
+# Crew Personal Agents
 
-This project provides a small tool interface for an isolated execution sandbox.  
-It lets an agent run Python code, run shell commands, and read/write/list files through a local HTTP sandbox server.
+This repository runs a Telegram-first personal AI assistant with persistent memory, pluggable skills, scheduled tasks, watcher automations, and a local debug web UI.
+
+## Purpose
+
+This project is built to act as a day-to-day personal assistant for a single user/group, including:
+
+- Personal task reminders and scheduled follow-ups.
+- Food logging and calorie tracking workflows.
+- Exercise/fitness message generation and workout nudges.
+- Bug report collection, summarization, and notifier-style updates.
+- Watcher-based monitoring that sends alerts/notifications when conditions match.
 
 ## What This Project Does
 
-- Exposes a single entry point in `tool.py` with operation-based routing.
-- Implements an HTTP client in `sandbox_tools.py` for sandbox endpoints.
-- Normalizes responses into a stable JSON shape so tool-calling systems can consume output reliably.
-- Auto-manages sandbox sessions and includes helpers for switching/reusing sessions.
+- Receives messages from an allowed Telegram group/user and processes them through an agent pipeline.
+- Uses a manager-style LLM agent that can call local skills (tools) under `skills/`.
+- Stores and retrieves semantic memory via Qdrant + mem0 for better context across conversations.
+- Runs background automation loops:
+  - scheduler jobs (`core/workers/cronjobs.py`)
+  - watcher checks and webhooks (`core/workers/watcher.py`, `watcher/`)
+- Publishes a FastAPI debug UI for health and run/event tracing (`core/webui.py`).
+- Keeps per-user state and prompts under `users/<username>/` (SQLite + markdown profiles).
 
-## How It Works
+## Core Architecture
 
-`tool.py` receives:
+- Entry point: `start.py` -> `core/telegram_bot.py`
+- Runtime loops:
+  - `worker_loop`: executes queued work via `process_message`
+  - `reply_loop`: sends formatted responses back to Telegram
+  - `scheduler_loop`: triggers cron-style agent tasks
+  - `watcher_loop`: executes watcher checks and queues decisions
+  - `webui_server`: serves FastAPI debug UI
+- Agent orchestration: `core/llm.py` + `core/agent_builder.py`
+- Skills:
+  - `skills/work/*` for operational tools (researcher, telegram, sandbox, browser, reddit)
+  - `skills/personal/*` for personal workflows (todo, food log, fitness, daily summary, scheduler)
 
-```json
-{
-  "operation": "cmd_run",
-  "payload": {"cmd": "echo hi"}
-}
+## Run Locally
+
+1. Create env file and set secrets:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
-It dispatches to the matching async function in `sandbox_tools.py`.
+Required at minimum:
+- `TELEGRAM_BOT_TOKEN`
+- `GROUP_GENERAL_CHAT_ID`
 
-Supported operations:
+2. Install dependencies:
 
-- `init_llm_tools`: initialize client + health check + ensure session
-- `py_run`: execute Python in current sandbox session
-- `fs_write`: write a file in session workspace
-- `fs_read`: read a file in session workspace
-- `fs_list`: list files/directories in session workspace
-- `cmd_run`: execute shell command in session workspace
-
-The client talks to a sandbox server (default `http://127.0.0.1:1000`) using:
-
-- `POST /sessions`
-- `GET /health`
-- `POST /py/run`
-- `POST /fs/write`
-- `GET /fs/read`
-- `POST /fs/list`
-- `POST /cmd/run`
-
-## Linux Setup
-
-Run:
-
-```bash
-chmod +x setup_linux.sh
-./setup_linux.sh
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
-The script:
+3. Start the bot + background services:
 
-1. Creates `.venv`
-2. Installs `requests`
-3. Verifies local module import paths
-
-## Usage
-
-Activate venv:
-
-```bash
-source .venv/bin/activate
+```powershell
+python start.py
 ```
 
-Run built-in smoke tests:
+4. Debug UI:
+- `http://127.0.0.1:8787`
+- `http://127.0.0.1:8787/health`
 
-```bash
-python tool.py
+## Docker
+
+Use `DOCKER.md` for full instructions, or quick start:
+
+```powershell
+docker compose build
+docker compose up -d
 ```
 
-Set custom sandbox URL if needed:
+Default exposed port: `8787`.
 
-```bash
-export SANDBOX_BASE_URL="http://127.0.0.1:1000"
-```
+## Repository Layout
 
-## Notes
-
-- `tool.py` inserts repository root into `sys.path` so `skills.work.sandbox` imports resolve.
-- `sandbox_tools.py` normalizes command output and tries to fix garbled UTF-16LE output from some Windows command cases.
+- `core/`: bot runtime, orchestration, workers, web UI
+- `skills/`: tool/skill implementations used by agents
+- `watcher/`: watcher configs, checks, and watcher state DB
+- `users/`: per-user prompts/config/state (`data.sqlite`)
+- `scripts/`: state backup/restore helpers
+- `extra_skills/`: additional/experimental skills
